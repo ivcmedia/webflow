@@ -108,31 +108,49 @@ $(document).ready(function () {
   }
 
 function decorateWebflowFormsWithUTMs(finalUTMs) {
-  const $forms = $('form[data-webflow-form-decorate="true"], form[data-webflow-form-decorate=true]');
-  if ($forms.length === 0) return;
+  const $wrappers = $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]');
+  console.log(`🔍 Found ${$wrappers.length} Webflow form wrapper(s) to decorate`);
 
-  $forms.each(function () {
-    const $form = $(this);
+  if ($wrappers.length === 0) return;
 
-    // Add or update a hidden input for each UTM we have
+  $wrappers.each(function (wIdx) {
+    const $wrapper = $(this);
+    // find the first form inside the wrapper (Webflow structure)
+    const $form = $wrapper.is('form') ? $wrapper : $wrapper.find('form').first();
+
+    if ($form.length === 0) {
+      console.warn(`⚠️ Wrapper #${wIdx + 1} has no <form> child`, $wrapper.get(0));
+      return;
+    }
+
+    console.log(`📝 Decorating form in wrapper #${wIdx + 1}`, $form.get(0));
+
     Object.keys(finalUTMs).forEach((key) => {
-      if (!key.startsWith('utm_')) return; // safety — only utm_* keys
+      if (!key.startsWith('utm_')) return;
       const value = finalUTMs[key];
+      console.log(`➡️ UTM "${key}" = "${value}"`);
 
-      // If a field already exists, update it; otherwise create it
       let $input = $form.find(`input[name="${key}"]`);
       if ($input.length === 0) {
+        console.log(`➕ Adding hidden input for ${key}`);
         $input = $('<input>', { type: 'hidden', name: key, value });
-        $form.append($input);
+        $form.append($input);        // bottom of form
+        // $form.prepend($input);    // top of form (use this if you prefer)
       } else {
+        console.log(`♻️ Updating existing hidden input for ${key}`);
         $input.val(value);
       }
     });
   });
 }
 
-// Run once on DOM ready
+// run once on DOM ready (after finalUTMs is computed)
 decorateWebflowFormsWithUTMs(finalUTMs);
+
+// safety: ensure fields still exist right before submit
+$('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]').on('submit', 'form', function () {
+  decorateWebflowFormsWithUTMs(finalUTMs);
+});
 
 // Also ensure fields exist right before submit (in case DOM mutates)
 $('form[data-webflow-form-decorate="true"], form[data-webflow-form-decorate=true]').on('submit', function () {
