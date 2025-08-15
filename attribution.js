@@ -107,6 +107,38 @@ $(document).ready(function () {
     });
   }
 
+function decorateWebflowFormsWithUTMs(finalUTMs) {
+  const $forms = $('form[data-webflow-form-decorate="true"], form[data-webflow-form-decorate=true]');
+  if ($forms.length === 0) return;
+
+  $forms.each(function () {
+    const $form = $(this);
+
+    // Add or update a hidden input for each UTM we have
+    Object.keys(finalUTMs).forEach((key) => {
+      if (!key.startsWith('utm_')) return; // safety — only utm_* keys
+      const value = finalUTMs[key];
+
+      // If a field already exists, update it; otherwise create it
+      let $input = $form.find(`input[name="${key}"]`);
+      if ($input.length === 0) {
+        $input = $('<input>', { type: 'hidden', name: key, value });
+        $form.append($input);
+      } else {
+        $input.val(value);
+      }
+    });
+  });
+}
+
+// Run once on DOM ready
+decorateWebflowFormsWithUTMs(finalUTMs);
+
+// Also ensure fields exist right before submit (in case DOM mutates)
+$('form[data-webflow-form-decorate="true"], form[data-webflow-form-decorate=true]').on('submit', function () {
+  decorateWebflowFormsWithUTMs(finalUTMs);
+});
+  
   // 🧠 INJECT UTM PARAMS INTO JOTFORM IFRAME
   if (utmString) {
     $("iframe[src^='https://form.jotform.com/']").each(function () {
