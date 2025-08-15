@@ -1,30 +1,20 @@
-// Initialize Reddit Pixel
-!function(w,d){
-  if(!w.rdt){
-    var p=w.rdt=function(){
-      p.sendEvent ? p.sendEvent.apply(p,arguments) : p.callQueue.push(arguments);
-    };
-    p.callQueue = [];
-    var t = d.createElement("script");
-    t.src = "https://www.redditstatic.com/ads/pixel.js";
-    t.async = true;
-    var s = d.getElementsByTagName("script")[0];
-    s.parentNode.insertBefore(t,s);
-  }
-}(window,document);
-
-// Start Reddit pixel with your pixel ID
-rdt('init', 'a2_h0xpgl4gxp6t');
-rdt('track', 'PageVisit'); // Log page visit immediately
 
 $(document).ready(function () {
   console.log("✅ DOM Ready");
 
+  // --- Safe FB tracker (no-op if fbq is missing)
+  function trackFacebook(event, params) {
+    if (typeof fbq === 'function') {
+      fbq('track', event, params);
+    } else {
+      console.warn('fbq not found; skipped', event, params || {});
+    }
+  }
+
   // 🔁 FIRE PIXELS ON INTERACTION
-  $('[data-utm]').click(function () {
+  $('[data-utm]').on('click', function () {
     console.log("📦 Clicked UTM-tracked element:", this);
-    fbq('track', 'Lead');
-    rdt('track', 'ViewContent');
+    trackFacebook('Lead');
   });
 
   // ✅ Monitor Webflow form submissions
@@ -35,8 +25,7 @@ $(document).ready(function () {
       const checkSuccess = setInterval(() => {
         if ($form.siblings('.w-form-done').is(':visible')) {
           console.log("🎯 Form submitted successfully");
-          fbq('track', 'Lead');
-          rdt('track', 'Lead');
+          trackFacebook('Lead');
           clearInterval(checkSuccess);
         }
       }, 100);
@@ -44,13 +33,18 @@ $(document).ready(function () {
   });
 
   // 🎯 UTM PARAMETER LOGIC
+  function setCookie(name, value, seconds) {
+    const maxAge = seconds ? `; max-age=${seconds}` : '';
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/${maxAge}; SameSite=Lax`;
+  }
+
   function getUTMParams() {
     const params = new URLSearchParams(window.location.search);
     const utms = {};
     for (const [key, value] of params.entries()) {
       if (key.startsWith('utm_')) {
         utms[key] = value;
-        document.cookie = `${key}=${value}; path=/; max-age=${60 * 60 * 24 * 7}`;
+        setCookie(key, value, 60 * 60 * 24 * 7); // 7 days
       }
     }
     console.log("🔍 UTMs from URL:", utms);
@@ -58,11 +52,14 @@ $(document).ready(function () {
   }
 
   function getUTMsFromCookies() {
-    const cookies = document.cookie.split('; ');
     const utms = {};
+    const cookies = document.cookie ? document.cookie.split('; ') : [];
     cookies.forEach(cookie => {
-      const [key, value] = cookie.split('=');
-      if (key.startsWith('utm_')) {
+      const eqIdx = cookie.indexOf('=');
+      if (eqIdx === -1) return;
+      const key = cookie.substring(0, eqIdx);
+      const value = decodeURIComponent(cookie.substring(eqIdx + 1));
+      if (key && key.startsWith('utm_')) {
         utms[key] = value;
       }
     });
@@ -85,15 +82,18 @@ $(document).ready(function () {
       console.log("🔗 Processing element:", this.tagName, originalHref);
 
       if (!originalHref || originalHref.startsWith('#')) return;
+      if (originalHref.startsWith('mailto:') || originalHref.startsWith('tel:')) return;
 
       try {
         const url = new URL(originalHref, window.location.origin);
         const params = new URLSearchParams(url.search);
 
+        // Remove existing UTM params
         for (const key of [...params.keys()]) {
           if (key.startsWith('utm_')) params.delete(key);
         }
 
+        // Add merged UTMs
         for (const key in finalUTMs) {
           params.set(key, finalUTMs[key]);
         }
@@ -116,12 +116,12 @@ $(document).ready(function () {
       const url = new URL(originalSrc, window.location.origin);
       const params = new URLSearchParams(url.search);
 
+      // Remove existing UTM params
       for (const key of [...params.keys()]) {
-        if (key.startsWith('utm_')) {
-          params.delete(key);
-        }
+        if (key.startsWith('utm_')) params.delete(key);
       }
 
+      // Add merged UTMs
       for (const key in finalUTMs) {
         params.set(key, finalUTMs[key]);
       }
