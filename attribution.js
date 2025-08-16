@@ -107,6 +107,73 @@ $(document).ready(function () {
     });
   }
 
+// --- Fire Meta "Lead" when a Webflow form submits successfully
+(function attachWebflowLeadTracking(){
+  const WRAPPER_SEL = '[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]';
+
+  function trackLead($form){
+    if (typeof fbq === 'function') {
+      // Send Lead + some useful context (optional)
+      const params = Object.assign(
+        {
+          form_name: $form.attr('name') || $form.attr('id') || '',
+          content_name: 'Webflow Form Lead'
+        },
+        // pass UTMs along as custom params if you like
+        (window.finalUTMs || {})
+      );
+      fbq('track', 'Lead', params);
+      console.log('📣 Meta Lead fired with params:', params);
+    } else {
+      console.warn('fbq not found; Lead not sent');
+    }
+  }
+
+  // Use MutationObserver to detect when .w-form-done becomes visible
+  document.querySelectorAll(WRAPPER_SEL).forEach(wrapper => {
+    const doneEl = wrapper.querySelector('.w-form-done');
+    const formEl = wrapper.querySelector('form');
+    if (!doneEl || !formEl) return;
+
+    // avoid double-firing per form
+    let fired = false;
+
+    // If it might already be visible (e.g., after AJAX), check once
+    const isVisible = () => !!(doneEl.offsetParent || doneEl.getClientRects().length);
+    if (isVisible()) {
+      fired = true;
+      trackLead($(formEl));
+    }
+
+    const obs = new MutationObserver(() => {
+      if (!fired && isVisible()) {
+        fired = true;
+        trackLead($(formEl));
+      }
+    });
+    obs.observe(doneEl, { attributes: true, attributeFilter: ['style', 'class'] });
+
+    // Safety: also watch the wrapper in case Webflow toggles classes higher up
+    const obs2 = new MutationObserver(() => {
+      if (!fired && isVisible()) {
+        fired = true;
+        trackLead($(formEl));
+      }
+    });
+    obs2.observe(wrapper, { attributes: true, subtree: true, attributeFilter: ['style', 'class'] });
+
+    // Extra safety: re-check right before submit (covers super-fast success toggles)
+    $(formEl).on('submit', () => {
+      setTimeout(() => {
+        if (!fired && isVisible()) {
+          fired = true;
+          trackLead($(formEl));
+        }
+      }, 300);
+    });
+  });
+})();
+ 
 function decorateWebflowFormsWithUTMs(finalUTMs) {
   const $wrappers = $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]');
   console.log(`🔍 Found ${$wrappers.length} Webflow form wrapper(s) to decorate`);
