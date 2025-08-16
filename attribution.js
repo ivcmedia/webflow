@@ -173,12 +173,18 @@ $(document).ready(function () {
     });
   });
 })();
- 
+
+//Add hidden UTM and other fields to the webflow form for attribution tracking
 function decorateWebflowFormsWithUTMs(finalUTMs) {
   const $wrappers = $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]');
   console.log(`🔍 Found ${$wrappers.length} Webflow form wrapper(s) to decorate`);
 
   if ($wrappers.length === 0) return;
+
+  //Force a SLUG variable into the finalUTMs object so that we can leverage the existing logic
+  //to add it into the URL params
+  const slug = location.pathname.split('/').filter(Boolean).pop() || '';
+  finalUTMs = { ...finalUTMs, utm_slug: slug };  
 
   $wrappers.each(function (wIdx) {
     const $wrapper = $(this);
