@@ -241,8 +241,11 @@ function addPetitionLanguageToWebflow() {
     return;
   }
 
-  const petitionText = $source.first().text().trim();
-  console.log(`📜 Petition language found (${petitionText.length} chars).`);
+  const $first = $source.first();
+  const petitionText = $first.text().trim();
+  const petitionHTML = ($first.html() || '').trim();
+
+  console.log(`📜 Petition language: ${petitionText.length} chars (text), ${petitionHTML.length} chars (html)`);
 
   const $wrappers = $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]');
   $wrappers.each(function (wIdx) {
@@ -254,19 +257,24 @@ function addPetitionLanguageToWebflow() {
       return;
     }
 
-    // Only add if it doesn't already exist
-    if ($form.find('textarea[name="Petition-Language"]').length === 0) {
-      console.log(`➕ Adding Petition-Language textarea to form #${wIdx + 1}`);
-      const $textarea = $('<textarea>', {
-        name: 'Petition-Language',
-        text: petitionText,
-        hidden: true // hidden so it doesn't display to the user
-      });
-      $form.append($textarea);
-    } else {
-      console.log(`♻️ Updating Petition-Language textarea in form #${wIdx + 1}`);
-      $form.find('textarea[name="Petition-Language"]').text(petitionText);
-    }
+    // upsert helper
+    const upsertTextarea = (name, value) => {
+      let $field = $form.find(`textarea[name="${name}"]`);
+      if ($field.length === 0) {
+        console.log(`➕ Adding hidden textarea "${name}" to form #${wIdx + 1}`);
+        $field = $('<textarea>', { name, hidden: true });
+        $form.append($field);
+      } else {
+        console.log(`♻️ Updating hidden textarea "${name}" in form #${wIdx + 1}`);
+      }
+      $field.val(value); // set safely
+    };
+
+    // plain text version (what you already had)
+    upsertTextarea('Petition-Language', petitionText);
+
+    // NEW: raw HTML version
+    upsertTextarea('Petition-Language-HTML', petitionHTML);
   });
 }
   
