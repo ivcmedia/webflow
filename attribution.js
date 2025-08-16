@@ -242,8 +242,9 @@ function addPetitionLanguageToWebflow() {
   }
 
   const $first = $source.first();
-  const petitionText = $first.text().trim();
-  const petitionHTML = ($first.html() || '').trim();
+  // more direct reads; trim zero-width spaces just in case
+  const petitionText = ($first.prop('textContent') || '').replace(/\u200B/g, '').trim();
+  const petitionHTML = ($first.prop('innerHTML')   || '').replace(/\u200B/g, '').trim();
 
   console.log(`📜 Petition language: ${petitionText.length} chars (text), ${petitionHTML.length} chars (html)`);
 
@@ -251,13 +252,11 @@ function addPetitionLanguageToWebflow() {
   $wrappers.each(function (wIdx) {
     const $wrapper = $(this);
     const $form = $wrapper.is('form') ? $wrapper : $wrapper.find('form').first();
-
     if ($form.length === 0) {
       console.warn(`⚠️ Wrapper #${wIdx + 1} has no <form> child`, $wrapper.get(0));
       return;
     }
 
-    // upsert helper
     const upsertTextarea = (name, value) => {
       let $field = $form.find(`textarea[name="${name}"]`);
       if ($field.length === 0) {
@@ -267,14 +266,13 @@ function addPetitionLanguageToWebflow() {
       } else {
         console.log(`♻️ Updating hidden textarea "${name}" in form #${wIdx + 1}`);
       }
-      $field.val(value); // set safely
+      // Set both the value property and the serialized text so DevTools shows it
+      $field.val(value);
+      $field.text(value);
     };
 
-    // plain text version (what you already had)
-    upsertTextarea('Petition-Language', petitionText);
-
-    // NEW: raw HTML version
-    upsertTextarea('Petition-Language-HTML', petitionHTML);
+    if (petitionText) upsertTextarea('Petition-Language', petitionText);
+    if (petitionHTML) upsertTextarea('Petition-Language-HTML', petitionHTML);
   });
 }
   
