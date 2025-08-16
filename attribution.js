@@ -219,15 +219,18 @@ function decorateWebflowFormsWithUTMs(finalUTMs) {
 
 // run once on DOM ready (after finalUTMs is computed)
 decorateWebflowFormsWithUTMs(finalUTMs);
+addPetitionLanguageToWebflow();
 
 // safety: ensure fields still exist right before submit
 $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]').on('submit', 'form', function () {
   decorateWebflowFormsWithUTMs(finalUTMs);
+  addPetitionLanguageToWebflow();
 });
 
 // Also ensure fields exist right before submit (in case DOM mutates)
 $('form[data-webflow-form-decorate="true"], form[data-webflow-form-decorate=true]').on('submit', function () {
   decorateWebflowFormsWithUTMs(finalUTMs);
+  addPetitionLanguageToWebflow();
 });
 
 //Locate the Petition DIV via data attribute then take its contents, create a text areaa, and force that html into the form
