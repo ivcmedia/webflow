@@ -220,6 +220,8 @@ function decorateWebflowFormsWithUTMs(finalUTMs) {
 // run once on DOM ready (after finalUTMs is computed)
 decorateWebflowFormsWithUTMs(finalUTMs);
 addPetitionLanguageToWebflow();
+// Start watching for petition language changes
+watchPetitionLanguageChanges()
 
 // safety: ensure fields still exist right before submit
 $('[data-webflow-form-decorate="true"], [data-webflow-form-decorate=true]').on('submit', 'form', function () {
@@ -274,6 +276,41 @@ function addPetitionLanguageToWebflow() {
     if (petitionText) upsertTextarea('Petition-Language', petitionText);
     if (petitionHTML) upsertTextarea('Petition-Language-HTML', petitionHTML);
   });
+}
+
+function watchPetitionLanguageChanges() {
+  const $source = $('[data-petition-language="true"]');
+  if ($source.length === 0) {
+    console.warn('⚠️ No element with data-petition-language="true" found to observe.');
+    return;
+  }
+
+  const petitionElement = $source.get(0); // Get the DOM element
+  console.log('👁️ Setting up MutationObserver for petition language element');
+
+  // Create a MutationObserver to watch for changes
+  const observer = new MutationObserver((mutations) => {
+    console.log('🔄 Petition language element changed, updating forms...');
+    
+    // Debounce rapid changes (optional but recommended)
+    clearTimeout(window.petitionUpdateTimeout);
+    window.petitionUpdateTimeout = setTimeout(() => {
+      addPetitionLanguageToWebflow();
+    }, 100); // Wait 100ms to batch rapid changes
+  });
+
+  // Configure and start observing
+  observer.observe(petitionElement, {
+    childList: true,      // Watch for child node changes
+    subtree: true,        // Watch all descendants
+    characterData: true,  // Watch for text content changes
+    attributes: false     // Don't need to watch attributes
+  });
+
+  console.log('✅ MutationObserver active for petition language element');
+  
+  // Store observer reference if you need to disconnect it later
+  window.petitionLanguageObserver = observer;
 }
   
   // 🧠 INJECT UTM PARAMS INTO JOTFORM IFRAME
