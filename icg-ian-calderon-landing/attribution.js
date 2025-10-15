@@ -301,31 +301,9 @@ function addPetitionLanguageToWebflow() {
     });
   }
 
-  // 🎯 SESSION STORAGE UTM TRACKING FOR EMBEDDED FORMS
+  // 🎯 POPULATE NUMERO/EMBEDDED FORM FIELDS WITH UTM PARAMETERS
   (function() {
-    // Get UTM parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const utmData = {
-      utm_source: urlParams.get('utm_source') || '',
-      utm_medium: urlParams.get('utm_medium') || '',
-      utm_campaign: urlParams.get('utm_campaign') || '',
-      utm_term: urlParams.get('utm_term') || '',
-      utm_content: urlParams.get('utm_content') || ''
-    };
-
-    // Save to session storage
-    if (utmData.utm_source || utmData.utm_medium || utmData.utm_campaign) {
-      sessionStorage.setItem('utmParams', JSON.stringify(utmData));
-      console.log('UTM params saved to session:', utmData);
-    } else {
-      const stored = sessionStorage.getItem('utmParams');
-      if (stored) {
-        Object.assign(utmData, JSON.parse(stored));
-        console.log('UTM params loaded from session:', utmData);
-      }
-    }
-
-    // Enhanced function to set field values that React/Vue will recognize
+    // Enhanced function to set field values that React/Vue/Numero will recognize
     function setFieldValue(field, value) {
       if (!field || !value) return;
       
@@ -337,26 +315,30 @@ function addPetitionLanguageToWebflow() {
       field.value = value;
       field.setAttribute('value', value);
       
-      // Trigger events
+      // Trigger events that frameworks listen for
       field.dispatchEvent(new Event('input', { bubbles: true }));
       field.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Fill the UTM fields
+    // Fill UTM fields in embedded forms (Numero, etc.)
     function fillUTMFields() {
-      const fields = [
-        { id: 'utm_source', value: utmData.utm_source },
-        { id: 'utm_medium', value: utmData.utm_medium },
-        { id: 'utm_campaign', value: utmData.utm_campaign },
-        { id: 'utm_term', value: utmData.utm_term },
-        { id: 'utm_content', value: utmData.utm_content }
-      ];
+      if (!finalUTMs || Object.keys(finalUTMs).length === 0) {
+        console.log('⚠️ No finalUTMs available to fill');
+        return;
+      }
 
-      fields.forEach(field => {
-        const input = document.querySelector(`input[id^="${field.id}"]`);
-        if (input && field.value) {
-          setFieldValue(input, field.value);
-          console.log(`Set ${field.id} to: ${field.value}`);
+      // Look for UTM fields by ID prefix (e.g., utm_source_12345)
+      Object.keys(finalUTMs).forEach(key => {
+        if (!key.startsWith('utm_')) return;
+        
+        const value = finalUTMs[key];
+        if (!value) return;
+
+        // Try to find input by ID prefix (e.g., utm_content_35515)
+        const input = document.querySelector(`input[id^="${key}"]`);
+        if (input) {
+          setFieldValue(input, value);
+          console.log(`✅ Numero field filled: ${key} = "${value}" (element: ${input.id})`);
         }
       });
     }
@@ -368,7 +350,7 @@ function addPetitionLanguageToWebflow() {
       console.log('Form data being submitted:');
       for (let [key, value] of formData.entries()) {
         if (key.includes('utm')) {
-          console.log(`${key}: ${value || 'EMPTY'}`);
+          console.log(`  ${key}: ${value || 'EMPTY'}`);
         }
       }
       
@@ -378,8 +360,8 @@ function addPetitionLanguageToWebflow() {
 
     // Fill fields when user interacts with form
     document.addEventListener('click', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.type === 'submit') {
-        console.log('User interaction detected, filling UTM fields');
+      if (e.target.tagName === 'INPUT' || e.target.type === 'submit' || e.target.classList.contains('NumeroSubmitButton')) {
+        console.log('🖱️ User interaction detected, filling UTM fields');
         fillUTMFields();
       }
     }, true);
@@ -387,7 +369,7 @@ function addPetitionLanguageToWebflow() {
     // Fill fields when any input gets focus
     document.addEventListener('focus', function(e) {
       if (e.target.tagName === 'INPUT') {
-        console.log('Input focused, filling UTM fields');
+        console.log('🎯 Input focused, filling UTM fields');
         fillUTMFields();
       }
     }, true);
@@ -399,11 +381,11 @@ function addPetitionLanguageToWebflow() {
     setTimeout(fillUTMFields, 2000);
     setTimeout(fillUTMFields, 3000);
 
-    // Watch for form loading
+    // Watch for Numero form loading
     const observer = new MutationObserver(function(mutations) {
-      const utmField = document.querySelector('input[id^="utm_source"]');
-      if (utmField && !utmField.value && utmData.utm_source) {
-        console.log('Form detected via MutationObserver, filling fields');
+      const utmField = document.querySelector('input[id^="utm_source"], input.NumeroInput[id*="utm"]');
+      if (utmField && !utmField.value && finalUTMs.utm_source) {
+        console.log('📋 Numero form detected via MutationObserver, filling fields');
         fillUTMFields();
       }
     });
@@ -416,6 +398,6 @@ function addPetitionLanguageToWebflow() {
     // Stop observing after 10 seconds
     setTimeout(() => observer.disconnect(), 10000);
     
-    console.log('UTM Tracking Script Loaded with params:', utmData);
+    console.log('🎯 UTM Field Filler Loaded. Will populate fields with:', finalUTMs);
   })();
 });
