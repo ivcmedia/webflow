@@ -106,3 +106,27 @@ body.image-position-inline .static-form-image-inline{
   -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'><path d='M21.801 10A10 10 0 1 1 17 3.335'/><path d='m9 11 3 3L22 4'/></svg>") no-repeat center / contain;
   mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'><path d='M21.801 10A10 10 0 1 1 17 3.335'/><path d='m9 11 3 3L22 4'/></svg>") no-repeat center / contain;
 }
+
+/* Hide UTM input fields in Numero forms */
+input[id^="utm_source"],
+input[id^="utm_medium"],
+input[id^="utm_campaign"],
+input[id^="utm_term"],
+input[id^="utm_content"] {
+  display: none !important;
+}
+
+/* Hide the label containers for UTM fields */
+.NumeroLabelContainer:has(.NumeroLabel) {
+  display: none !important;
+}
+
+/* If :has doesn't work, hide all containers before utm inputs */
+input[id^="utm_source"],
+input[id^="utm_medium"],
+input[id^="utm_campaign"],
+input[id^="utm_term"],
+input[id^="utm_content"],
+.NumeroLabelContainer:has(+ input[id^="utm_"]) {
+  display: none !important;
+}
