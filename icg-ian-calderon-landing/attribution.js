@@ -300,4 +300,122 @@ function addPetitionLanguageToWebflow() {
       console.log("✅ Updated JotForm iframe src:", url.toString());
     });
   }
+
+  // 🎯 SESSION STORAGE UTM TRACKING FOR EMBEDDED FORMS
+  (function() {
+    // Get UTM parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const utmData = {
+      utm_source: urlParams.get('utm_source') || '',
+      utm_medium: urlParams.get('utm_medium') || '',
+      utm_campaign: urlParams.get('utm_campaign') || '',
+      utm_term: urlParams.get('utm_term') || '',
+      utm_content: urlParams.get('utm_content') || ''
+    };
+
+    // Save to session storage
+    if (utmData.utm_source || utmData.utm_medium || utmData.utm_campaign) {
+      sessionStorage.setItem('utmParams', JSON.stringify(utmData));
+      console.log('UTM params saved to session:', utmData);
+    } else {
+      const stored = sessionStorage.getItem('utmParams');
+      if (stored) {
+        Object.assign(utmData, JSON.parse(stored));
+        console.log('UTM params loaded from session:', utmData);
+      }
+    }
+
+    // Enhanced function to set field values that React/Vue will recognize
+    function setFieldValue(field, value) {
+      if (!field || !value) return;
+      
+      // Try native value setter to trigger React
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      nativeInputValueSetter.call(field, value);
+      
+      // Also set directly
+      field.value = value;
+      field.setAttribute('value', value);
+      
+      // Trigger events
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Fill the UTM fields
+    function fillUTMFields() {
+      const fields = [
+        { id: 'utm_source', value: utmData.utm_source },
+        { id: 'utm_medium', value: utmData.utm_medium },
+        { id: 'utm_campaign', value: utmData.utm_campaign },
+        { id: 'utm_term', value: utmData.utm_term },
+        { id: 'utm_content', value: utmData.utm_content }
+      ];
+
+      fields.forEach(field => {
+        const input = document.querySelector(`input[id^="${field.id}"]`);
+        if (input && field.value) {
+          setFieldValue(input, field.value);
+          console.log(`Set ${field.id} to: ${field.value}`);
+        }
+      });
+    }
+
+    // Debug what's being submitted
+    document.addEventListener('submit', function(e) {
+      console.log('=== FORM SUBMISSION DETECTED ===');
+      const formData = new FormData(e.target);
+      console.log('Form data being submitted:');
+      for (let [key, value] of formData.entries()) {
+        if (key.includes('utm')) {
+          console.log(`${key}: ${value || 'EMPTY'}`);
+        }
+      }
+      
+      // Try to fill fields one more time before submission
+      fillUTMFields();
+    }, true);
+
+    // Fill fields when user interacts with form
+    document.addEventListener('click', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.type === 'submit') {
+        console.log('User interaction detected, filling UTM fields');
+        fillUTMFields();
+      }
+    }, true);
+
+    // Fill fields when any input gets focus
+    document.addEventListener('focus', function(e) {
+      if (e.target.tagName === 'INPUT') {
+        console.log('Input focused, filling UTM fields');
+        fillUTMFields();
+      }
+    }, true);
+
+    // Initial fill attempts at different timings
+    fillUTMFields();
+    setTimeout(fillUTMFields, 500);
+    setTimeout(fillUTMFields, 1000);
+    setTimeout(fillUTMFields, 2000);
+    setTimeout(fillUTMFields, 3000);
+
+    // Watch for form loading
+    const observer = new MutationObserver(function(mutations) {
+      const utmField = document.querySelector('input[id^="utm_source"]');
+      if (utmField && !utmField.value && utmData.utm_source) {
+        console.log('Form detected via MutationObserver, filling fields');
+        fillUTMFields();
+      }
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Stop observing after 10 seconds
+    setTimeout(() => observer.disconnect(), 10000);
+    
+    console.log('UTM Tracking Script Loaded with params:', utmData);
+  })();
 });
