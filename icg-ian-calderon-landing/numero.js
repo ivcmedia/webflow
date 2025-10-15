@@ -7,29 +7,23 @@ $(document).ready(function () {
 
   let isFilling = false; // Prevent infinite loops
   
-  // Enhanced function to set field values that React/Vue/Numero will recognize
+  // Minimal working function for Numero forms
+  // Requires: native property setter + input event
   function setFieldValue(field, value) {
     if (!field || !value) return;
     
-    // Get native value setter
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    
-    // Set value using native setter
-    nativeInputValueSetter.call(field, value);
-    
-    // Also set directly
-    field.value = value;
-    
-    // Fire input event
-    field.dispatchEvent(new InputEvent('input', { 
-      bubbles: true, 
-      cancelable: true,
-      inputType: 'insertText',
-      data: value
-    }));
-    
-    // Fire change event
-    field.dispatchEvent(new Event('change', { bubbles: true }));
+    try {
+      // REQUIRED: Use native value setter to bypass React/Vue getter/setter
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      nativeInputValueSetter.call(field, value);
+      
+      // REQUIRED: Fire input event so Numero's framework detects the change
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      console.log(`✅ Numero field filled: ${field.id || field.name} = "${value}"`);
+    } catch (e) {
+      console.warn('Error setting field value:', e);
+    }
   }
 
   // Fill UTM fields in embedded forms (Numero, etc.)
@@ -53,7 +47,6 @@ $(document).ready(function () {
       const input = document.querySelector(`input[id^="${key}"]`);
       if (input) {
         setFieldValue(input, value);
-        console.log(`✅ Numero field filled: ${key} = "${value}" (element: ${input.id})`);
       }
     });
 
