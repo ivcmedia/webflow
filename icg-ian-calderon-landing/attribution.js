@@ -307,17 +307,33 @@ function addPetitionLanguageToWebflow() {
     function setFieldValue(field, value) {
       if (!field || !value) return;
       
-      // Try native value setter to trigger React
+      // Step 1: Focus the field first (makes frameworks "wake up")
+      field.focus();
+      
+      // Step 2: Try native value setter to trigger React
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       nativeInputValueSetter.call(field, value);
       
-      // Also set directly
+      // Step 3: Set directly
       field.value = value;
       field.setAttribute('value', value);
       
-      // Trigger events that frameworks listen for
-      field.dispatchEvent(new Event('input', { bubbles: true }));
+      // Step 4: Trigger MORE events that frameworks listen for
+      // Use InputEvent constructor for 'input' (more realistic)
+      field.dispatchEvent(new InputEvent('input', { 
+        bubbles: true, 
+        cancelable: true,
+        inputType: 'insertText',
+        data: value
+      }));
+      
       field.dispatchEvent(new Event('change', { bubbles: true }));
+      field.dispatchEvent(new Event('blur', { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      field.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+      
+      // Step 5: Blur the field (completes the interaction cycle)
+      field.blur();
     }
 
     // Fill UTM fields in embedded forms (Numero, etc.)
