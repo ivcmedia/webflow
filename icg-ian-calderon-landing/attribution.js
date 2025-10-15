@@ -303,50 +303,42 @@ function addPetitionLanguageToWebflow() {
 
   // 🎯 POPULATE NUMERO/EMBEDDED FORM FIELDS WITH UTM PARAMETERS
   (function() {
+    let isFilling = false; // Prevent infinite loops
+    
     // Enhanced function to set field values that React/Vue/Numero will recognize
-    // Uses character-by-character typing simulation for maximum compatibility
     function setFieldValue(field, value) {
       if (!field || !value) return;
-      
-      // Focus the field first
-      field.focus();
-      
-      // Clear existing value
-      field.value = '';
       
       // Get native value setter
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       
-      // Simulate typing character by character
-      const chars = value.split('');
-      chars.forEach((char, index) => {
-        const currentValue = value.substring(0, index + 1);
-        
-        // Set value using native setter
-        nativeInputValueSetter.call(field, currentValue);
-        
-        // Fire input event for each character
-        field.dispatchEvent(new InputEvent('input', { 
-          bubbles: true, 
-          cancelable: true,
-          inputType: 'insertText',
-          data: char
-        }));
-      });
+      // Set value using native setter
+      nativeInputValueSetter.call(field, value);
       
-      // Final change event after all characters are typed
+      // Also set directly
+      field.value = value;
+      
+      // Fire input event
+      field.dispatchEvent(new InputEvent('input', { 
+        bubbles: true, 
+        cancelable: true,
+        inputType: 'insertText',
+        data: value
+      }));
+      
+      // Fire change event
       field.dispatchEvent(new Event('change', { bubbles: true }));
-      
-      // Blur to complete the interaction
-      field.blur();
     }
 
     // Fill UTM fields in embedded forms (Numero, etc.)
     function fillUTMFields() {
+      if (isFilling) return; // Prevent recursive calls
       if (!finalUTMs || Object.keys(finalUTMs).length === 0) {
         console.log('⚠️ No finalUTMs available to fill');
         return;
       }
+
+      isFilling = true;
 
       // Look for UTM fields by ID prefix (e.g., utm_source_12345)
       Object.keys(finalUTMs).forEach(key => {
@@ -362,6 +354,8 @@ function addPetitionLanguageToWebflow() {
           console.log(`✅ Numero field filled: ${key} = "${value}" (element: ${input.id})`);
         }
       });
+
+      setTimeout(() => { isFilling = false; }, 100);
     }
 
     // Debug what's being submitted
@@ -379,28 +373,11 @@ function addPetitionLanguageToWebflow() {
       fillUTMFields();
     }, true);
 
-    // Fill fields when user interacts with form
-    document.addEventListener('click', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.type === 'submit' || e.target.classList.contains('NumeroSubmitButton')) {
-        console.log('🖱️ User interaction detected, filling UTM fields');
-        fillUTMFields();
-      }
-    }, true);
-
-    // Fill fields when any input gets focus
-    document.addEventListener('focus', function(e) {
-      if (e.target.tagName === 'INPUT') {
-        console.log('🎯 Input focused, filling UTM fields');
-        fillUTMFields();
-      }
-    }, true);
-
     // Initial fill attempts at different timings
     fillUTMFields();
     setTimeout(fillUTMFields, 500);
     setTimeout(fillUTMFields, 1000);
     setTimeout(fillUTMFields, 2000);
-    setTimeout(fillUTMFields, 3000);
 
     // Watch for Numero form loading
     const observer = new MutationObserver(function(mutations) {
