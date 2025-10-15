@@ -304,35 +304,40 @@ function addPetitionLanguageToWebflow() {
   // 🎯 POPULATE NUMERO/EMBEDDED FORM FIELDS WITH UTM PARAMETERS
   (function() {
     // Enhanced function to set field values that React/Vue/Numero will recognize
+    // Uses character-by-character typing simulation for maximum compatibility
     function setFieldValue(field, value) {
       if (!field || !value) return;
       
-      // Step 1: Focus the field first (makes frameworks "wake up")
+      // Focus the field first
       field.focus();
       
-      // Step 2: Try native value setter to trigger React
+      // Clear existing value
+      field.value = '';
+      
+      // Get native value setter
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-      nativeInputValueSetter.call(field, value);
       
-      // Step 3: Set directly
-      field.value = value;
-      field.setAttribute('value', value);
+      // Simulate typing character by character
+      const chars = value.split('');
+      chars.forEach((char, index) => {
+        const currentValue = value.substring(0, index + 1);
+        
+        // Set value using native setter
+        nativeInputValueSetter.call(field, currentValue);
+        
+        // Fire input event for each character
+        field.dispatchEvent(new InputEvent('input', { 
+          bubbles: true, 
+          cancelable: true,
+          inputType: 'insertText',
+          data: char
+        }));
+      });
       
-      // Step 4: Trigger MORE events that frameworks listen for
-      // Use InputEvent constructor for 'input' (more realistic)
-      field.dispatchEvent(new InputEvent('input', { 
-        bubbles: true, 
-        cancelable: true,
-        inputType: 'insertText',
-        data: value
-      }));
-      
+      // Final change event after all characters are typed
       field.dispatchEvent(new Event('change', { bubbles: true }));
-      field.dispatchEvent(new Event('blur', { bubbles: true }));
-      field.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-      field.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
       
-      // Step 5: Blur the field (completes the interaction cycle)
+      // Blur to complete the interaction
       field.blur();
     }
 
