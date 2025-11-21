@@ -337,4 +337,24 @@ function watchPetitionLanguageChanges() {
       console.log("✅ Updated JotForm iframe src:", url.toString());
     });
   }
+
+  // Sync form name from wrapper div[data-form-name]
+  (function syncFormNameFromWrapper() {
+    const wrapper = document.querySelector('div[data-form-name]');
+    if (!wrapper) return;
+    const form = wrapper.querySelector('form');
+    const formName = wrapper.getAttribute('data-form-name');
+    if (form && formName) {
+      form.setAttribute('name', formName);
+      form.setAttribute('data-name', formName);
+      console.log('🔧 Form name synchronized from wrapper:', formName);
+    }
+  })();
+
+  // Enforce required on elements with data-required="True"
+  (function enforceRequiredFields() {
+    document.querySelectorAll('[data-required="True"]').forEach(function (el) {
+      el.setAttribute('required', '');
+    });
+  })();
 });
